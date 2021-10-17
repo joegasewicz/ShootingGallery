@@ -1,6 +1,8 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+
 
 namespace ShootingGallery
 {
@@ -9,11 +11,25 @@ namespace ShootingGallery
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
 
+        Texture2D targetSprite;
+        Texture2D crosshairsSprite;
+        Texture2D backgroundSprite;
+        SpriteFont gameFont;
+
+        Vector2 targetPosition = new Vector2(300, 300);
+        const int targetRadius = 45;
+
+        MouseState mState;
+        bool mReleased = true;
+        int score = 0;
+
+        double timer = 10;
+
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
-            IsMouseVisible = true;
+            IsMouseVisible = false;
         }
 
         protected override void Initialize()
@@ -27,7 +43,10 @@ namespace ShootingGallery
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            // TODO: use this.Content to load your game content here
+            targetSprite = Content.Load<Texture2D>("target");
+            crosshairsSprite = Content.Load<Texture2D>("crosshairs");
+            backgroundSprite = Content.Load<Texture2D>("sky");
+            gameFont = Content.Load<SpriteFont>("galleryFont");
         }
 
         protected override void Update(GameTime gameTime)
@@ -35,7 +54,38 @@ namespace ShootingGallery
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            // TODO: Add your update logic here
+            if (timer > 0)
+            {
+                timer -= gameTime.ElapsedGameTime.TotalSeconds;
+            } 
+
+            if (timer < 0)
+            {
+                timer = 0;
+            }
+
+            mState = Mouse.GetState();
+
+            if (mState.LeftButton == ButtonState.Pressed && mReleased == true)
+            {
+                float mouseTargetDist = Vector2.Distance(targetPosition, mState.Position.ToVector2());
+
+                if (mouseTargetDist < targetRadius && timer > 0)
+                {
+                    score++;
+
+                    Random rand = new Random();
+                    int targetCirc = targetRadius * 2;
+                    targetPosition.X = rand.Next(targetCirc, _graphics.PreferredBackBufferWidth - targetCirc);
+                    targetPosition.Y = rand.Next(targetCirc, _graphics.PreferredBackBufferHeight - targetCirc);
+                }
+                mReleased = false;
+            }
+
+            if (mState.LeftButton == ButtonState.Released)
+            {
+                mReleased = true;
+            }
 
             base.Update(gameTime);
         }
@@ -44,7 +94,18 @@ namespace ShootingGallery
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
-            // TODO: Add your drawing code here
+            _spriteBatch.Begin();
+            _spriteBatch.Draw(backgroundSprite, new Vector2(0, 0), Color.White);
+            _spriteBatch.DrawString(gameFont, "Score: " + score.ToString(), new Vector2(3, 3), Color.White);
+            _spriteBatch.DrawString(gameFont, "Time: " + Math.Ceiling(timer).ToString(), new Vector2(3, 40), Color.White);
+
+            if (timer > 0)
+            {
+                _spriteBatch.Draw(targetSprite, new Vector2(targetPosition.X - targetRadius, targetPosition.Y - targetRadius), Color.White);
+            }
+
+            _spriteBatch.Draw(crosshairsSprite, new Vector2(mState.X - 25, mState.Y - 25), Color.White);
+            _spriteBatch.End();
 
             base.Draw(gameTime);
         }
